@@ -1,0 +1,112 @@
+import pygame
+import sys
+import random
+from collections import deque
+
+#DFS на базе стека для создания лабиринта
+def labyrynth(x, y):
+    stack = [(x, y)]
+    matrix[x][y] = white
+    while stack:
+        cx, cy = stack[-1]
+        directions = [(0, 2), (2, 0), (0, -2), (-2, 0)]
+        random.shuffle(directions)
+        for dx, dy in directions:
+            nx, ny = cx + dx, cy + dy
+            if 1 <= nx < r - 1 and 1 <= ny < c - 1 and matrix[nx][ny] == gray:
+                matrix[nx][ny] = white
+                matrix[cx + dx // 2][cy + dy // 2] = white
+                stack.append((nx, ny))
+                break
+        else:
+            stack.pop()
+
+#BFS для проверки доступности выхода
+def exit_possible(startx, starty, exitx, exity):
+    visited = [[False] * c for i in range(r)]
+    queue = deque([(startx, starty)])
+    visited[startx][starty] = True
+
+    while queue:
+        x, y = queue.popleft()
+        if x == exitx and y == exity:
+            return True
+        for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < r and 0 <= ny < c and not visited[nx][ny] and matrix[nx][ny] == white:
+                visited[nx][ny] = True
+                queue.append((nx, ny))
+    return False
+
+pygame.init()
+width, height = 700, 700
+r, c = 20, 20
+size = width // c
+white = (255, 255, 255)
+black = (0, 0, 0)
+gray = (125, 125, 125)
+blue = (0, 0, 255)
+
+screen = pygame.display.set_mode((width + 300, height))
+pygame.display.set_caption("Лабиринт")
+clock = pygame.time.Clock()
+
+matrix = [[gray for i in range(c)] for j in range(r)]
+
+startx, starty = 1, 0
+playerx, playery = startx, starty
+matrix[startx][starty] = white
+labyrynth(startx, starty)
+
+exits = [i for i in range(1, r - 1) if matrix[i][c - 2] == white]
+exity = c - 2
+if exits:
+    exitx = random.choice(exits)
+else:
+    exitx = random.randint(1, r - 2)
+    i = 2
+    while not exit_possible(startx, starty, exitx, exity):
+        matrix[exitx][c - i] = white
+        i += 1
+exity = c - 1
+matrix[exitx][exity] = white
+matrix[exitx][exity - 1] = white
+for i in range(50):
+    cycx, cycy = random.randint(2, c - 2), random.randint(2, r - 2)
+    matrix[cycx][cycy] = white
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                if matrix[playerx - 1][playery] == white:
+                    playerx -= 1
+            elif event.key == pygame.K_DOWN:
+                if matrix[playerx + 1][playery] == white:
+                    playerx += 1
+            elif event.key == pygame.K_LEFT:
+                if matrix[playerx][playery - 1] == white:
+                    playery -= 1
+            elif event.key == pygame.K_RIGHT:
+                if matrix[playerx][playery + 1] == white:
+                    playery += 1
+            elif event.key == pygame.K_ESCAPE:
+                running = False
+
+    screen.fill(gray)
+
+    for row in range(r):
+        for col in range(c):
+            rect = pygame.Rect(col * size, row * size, size, size)
+            pygame.draw.rect(screen, matrix[row][col], rect)
+            pygame.draw.rect(screen, black, rect, 1)
+    player = pygame.Rect(playery * size, playerx * size, size, size)
+    pygame.draw.rect(screen, blue, player)
+    pygame.draw.rect(screen, white, (width, 0, 300, height))
+
+    pygame.display.flip()
+pygame.quit()
+sys.exit()
